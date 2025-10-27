@@ -1,3 +1,4 @@
+import os
 from flask import Flask, render_template, request, redirect, url_for, flash
 import sqlite3
 
@@ -77,6 +78,14 @@ def records():
         c.execute("SELECT equipment_name, action, timestamp FROM equipment_log WHERE student_id = ? ORDER BY timestamp DESC", (student_id,))
         logs = c.fetchall()
         conn.close()
+        return render_template('records.html', logs=logs)
+
+    # --- Ensure DB is initialized and server starts ---
+    if __name__ == "__main__":
+        init_db()
+        app.run(host=os.environ.get("FLASK_HOST", "127.0.0.1"),
+                port=int(os.environ.get("FLASK_PORT", 5000)),
+                debug=os.environ.get("FLASK_DEBUG", "False") == "True")
     return render_template('records.html', logs=logs)
 
 @app.route('/history')
@@ -90,4 +99,9 @@ def history():
 
 if __name__ == '__main__':
     init_db()
-    app.run(debug=True)
+    # Allow configuring host/port/debug via environment variables so Electron can control them
+    host = os.environ.get('FLASK_HOST', '127.0.0.1')
+    port = int(os.environ.get('FLASK_PORT', '5000'))
+    debug = os.environ.get('FLASK_DEBUG', 'False').lower() in ('1', 'true', 'yes')
+    # When launched by Electron, use_reloader must be False to avoid double-launching the server
+    app.run(host=host, port=port, debug=debug, use_reloader=False)
