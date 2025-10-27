@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head><title>Borrow / Return</title></head>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<body>
+  <h2>Borrow / Return Equipment</h2>
+  {% with messages = get_flashed_messages() %}
+    {% for msg in messages %}
+      <p style="color:green;">{{ msg }}</p>
+    {% endfor %}
+  {% endwith %}
+  <form method="POST">
+    Student ID: <input type="text" name="student_id" required><br>
+    Equipment (comma separated): <input type="text" name="equipment" required><br>
+    Action:
+    <select name="action">
+      <option value="borrow">Borrow</option>
+      <option value="return">Return</option>
+    </select><br>
+    <button type="submit">Submit</button>
+  </form>
+  <a href="/", class="back-button">Back</a>
+</body>
+</html>

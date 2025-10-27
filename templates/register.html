@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head><title>Register Student</title></head>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<body>
+  <h2>Register Student</h2>
+  {% with messages = get_flashed_messages() %}
+    {% for msg in messages %}
+      <p style="color:green;">{{ msg }}</p>
+    {% endfor %}
+  {% endwith %}
+  <form method="POST">
+    Student ID: <input type="text" name="student_id" required><br>
+    Full Name: <input type="text" name="name" required><br>
+    Course: <input type="text" name="course"><br>
+    Year Level: <input type="number" name="year_level"><br>
+    <button type="submit">Register</button>
+  </form>
+  <a href="/", class="back-button">Back</a>
+</body>
+</html>

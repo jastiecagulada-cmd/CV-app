@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head><title>All History</title></head>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<body>
+  <h2>All Equipment Logs</h2>
+  <table border="1">
+    <tr><th>Student ID</th><th>Equipment</th><th>Action</th><th>Timestamp</th></tr>
+    {% for row in logs %}
+      <tr>
+        <td>{{ row[0] }}</td>
+        <td>{{ row[1] }}</td>
+        <td>{{ row[2] }}</td>
+        <td>{{ row[3] }}</td>
+      </tr>
+    {% endfor %}
+  </table>
+  <a href="/", class="back-button">Back</a>
+</body>
+</html>

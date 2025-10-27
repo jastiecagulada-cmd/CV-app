@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head><title>Student Record</title></head>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<body>
+  <h2>Search Student Records</h2>
+  <form method="POST">
+    Student ID: <input type="text" name="student_id" required>
+    <button type="submit">Search</button>
+  </form>
+  <hr>
+  <table border="1">
+    <tr><th>Equipment</th><th>Action</th><th>Timestamp</th></tr>
+    {% for row in logs %}
+      <tr>
+        <td>{{ row[0] }}</td>
+        <td>{{ row[1] }}</td>
+        <td>{{ row[2] }}</td>
+      </tr>
+    {% endfor %}
+  </table>
+  <a href="/", class="back-button">Back</a>
+</body>
+</html>
