@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head><title>Inventory Management</title></head>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+<body>
+
+  <h2>Inventory Management</h2>
+
+  {% with messages = get_flashed_messages() %}
+    {% for msg in messages %}
+      <p style="color:green;">{{ msg }}</p>
+    {% endfor %}
+  {% endwith %}
+
+  <h3>Add Equipment</h3>
+  <form method="POST">
+    <input type="hidden" name="action" value="add">
+    Equipment Name: <input type="text" name="name" required><br>
+    Quantity: <input type="number" name="quantity" min="0" required><br>
+    <button type="submit">Add Equipment</button>
+  </form>
+
+  <h3>Current Inventory</h3>
+  {% if items %}
+    <ul>
+      {% for id, name, qty in items %}
+        <li>
+          <b>{{ name }}</b> — {{ qty }} pcs<br>
+          <form method="POST" style="display:inline;">
+            <input type="hidden" name="action" value="update">
+            <input type="hidden" name="item_id" value="{{ id }}">
+            Update Quantity:
+            <input type="number" name="quantity" value="{{ qty }}" min="0" style="width:80px;">
+            <button type="submit">Update</button>
+          </form>
+          <form method="POST" style="display:inline;">
+            <input type="hidden" name="action" value="delete">
+            <input type="hidden" name="item_id" value="{{ id }}">
+            <button type="submit" style="background-color:#d9534f;">Delete</button>
+          </form>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>No equipment found in inventory.</p>
+  {% endif %}
+
+  <a href="/" class="back-button">Back</a>
+
+</body>
+</html>

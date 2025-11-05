@@ -1,24 +1,89 @@
 <!DOCTYPE html>
 <html>
-<head><title>Borrow / Return</title></head>
-<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<head>
+    <title>Borrow/Return Equipment</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
 <body>
-  <h2>Borrow / Return Equipment</h2>
-  {% with messages = get_flashed_messages() %}
-    {% for msg in messages %}
-      <p style="color:green;">{{ msg }}</p>
-    {% endfor %}
-  {% endwith %}
-  <form method="POST">
-    Student ID: <input type="text" name="student_id" required><br>
-    Equipment (comma separated): <input type="text" name="equipment" required><br>
-    Action:
-    <select name="action">
-      <option value="borrow">Borrow</option>
-      <option value="return">Return</option>
-    </select><br>
-    <button type="submit">Submit</button>
-  </form>
-  <a href="/", class="back-button">Back</a>
+    <div class="container">
+        <h2>Borrow / Return Equipment</h2>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for msg in messages %}
+                    <div class="flash">{{ msg }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Borrow/Return Form -->
+        <form method="POST">
+            <label>Student ID:</label>
+            <input type="text" name="student_id" required>
+
+            <label>Action:</label>
+            <select name="action" required>
+                <option value="borrow">Borrow</option>
+                <option value="return">Return</option>
+            </select>
+
+            <label>Equipment Name:</label>
+            <select name="equipment_name" required>
+                {% if detected_items %}
+                    {% for item in detected_items %}
+                        <option value="{{ item }}">{{ item }}</option>
+                    {% endfor %}
+                {% else %}
+                    {% for id, name, qty in inventory %}
+                        <option value="{{ name }}">{{ name }} ({{ qty }} available)</option>
+                    {% endfor %}
+                {% endif %}
+            </select>
+
+            <label>Quantity:</label>
+            <input type="number" name="quantity" min="1" value="1"
+                {% if detected_items %}
+                    max="{{ inventory_dict[detected_items[0]] }}"
+                {% endif %}
+            >
+
+            <button type="submit">Submit</button>
+        </form>
+
+        <!-- Camera Capture -->
+        <h3>Capture from Camera</h3>
+        <button type="button" id="start-camera" class="camera-btn">Start Camera</button><br><br>
+        <video id="camera" width="320" height="240" autoplay></video><br>
+        <canvas id="canvas" width="320" height="240" style="display:none;"></canvas><br>
+        <form id="image-form" method="POST" action="{{ url_for('process_capture') }}">
+            <input type="hidden" name="image_data" id="image_data">
+        </form>
+        <button type="button" id="capture" class="camera-btn">Capture</button>
+
+        <a href="/" class="back-button">Back</a>
+    </div>
+
+    <script>
+        const video = document.getElementById('camera');
+        const canvas = document.getElementById('canvas');
+        const imageForm = document.getElementById('image-form');
+        const imageDataInput = document.getElementById('image_data');
+        const startCameraButton = document.getElementById('start-camera');
+        const captureButton = document.getElementById('capture');
+
+        startCameraButton.onclick = async function() {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            video.srcObject = stream;
+        };
+
+        captureButton.onclick = function() {
+            const context = canvas.getContext('2d');
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const imageData = canvas.toDataURL('image/png');
+            imageDataInput.value = imageData;
+            imageForm.submit();
+        };
+    </script>
 </body>
 </html>
