@@ -7,7 +7,7 @@ Running tests:
     pytest test_integration.py::test_inventory_independence -v
 """
 
-import pytest
+import pytest  # type: ignore
 import sqlite3
 import os
 
