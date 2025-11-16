@@ -5,6 +5,7 @@ from ultralytics import YOLO
 import cv2
 import numpy as np
 import base64
+import datetime
 
 # Load YOLO model once - use relative path
 model_path = os.path.join(os.path.dirname(__file__), "after_dsmtf.pt")
@@ -184,12 +185,30 @@ def borrow_return():
                 new_count = current_student_items + total_quantity
                 c.execute("UPDATE students SET number_of_equipment=? WHERE student_id=?", 
                           (new_count, student_id))
-                flash(f"Successfully borrowed {total_quantity} item(s) ({', '.join([f'{q}x {n}' for n, q in zip(equipment_names, quantities)])}).")
             elif action == "return":
                 new_count = max(0, current_student_items - total_quantity)
                 c.execute("UPDATE students SET number_of_equipment=? WHERE student_id=?", 
                           (new_count, student_id))
-                flash(f"Successfully returned {total_quantity} item(s) ({', '.join([f'{q}x {n}' for n, q in zip(equipment_names, quantities)])}).")
+            
+            conn.commit()
+            conn.close()
+            
+            # Redirect to summary page with transaction details
+            from urllib.parse import urlencode
+            summary_data = urlencode({
+                'student_id': student_id,
+                'action': action,
+                'items': ','.join(equipment_names),
+                'quantities': ','.join(map(str, quantities)),
+                'total': total_quantity
+            })
+            return redirect(url_for('transaction_summary', **{
+                'student_id': student_id,
+                'action': action,
+                'items': ','.join(equipment_names),
+                'quantities': ','.join(map(str, quantities)),
+                'total': total_quantity
+            }))
         
         conn.commit()
         conn.close()
@@ -272,6 +291,53 @@ def records():
         logs = c.fetchall()
         conn.close()
     return render_template('records.html', logs=logs)
+
+
+@app.route('/transaction_summary')
+def transaction_summary():
+    """Display transaction summary after successful borrow/return."""
+    student_id = request.args.get('student_id', '')
+    action = request.args.get('action', '')
+    items = request.args.get('items', '').split(',') if request.args.get('items') else []
+    quantities = request.args.get('quantities', '').split(',') if request.args.get('quantities') else []
+    total = int(request.args.get('total', 0))
+    
+    # Get student details
+    conn = sqlite3.connect("database.db")
+    c = conn.cursor()
+    c.execute("SELECT name, course, year_level, number_of_equipment FROM students WHERE student_id=?", (student_id,))
+    student_data = c.fetchone()
+    conn.close()
+    
+    if not student_data:
+        flash("Student not found.")
+        return redirect(url_for('borrow_return'))
+    
+    student_name, course, year_level, equipment_count = student_data
+    
+    # Prepare transaction items list
+    transaction_items = []
+    for item, qty in zip(items, quantities):
+        if item and qty:
+            transaction_items.append({
+                'name': item,
+                'quantity': int(qty)
+            })
+    
+    # Prepare context data
+    context = {
+        'student_id': student_id,
+        'student_name': student_name,
+        'course': course,
+        'year_level': year_level,
+        'action': action,
+        'total_items': total,
+        'equipment_count': equipment_count,
+        'items': transaction_items,
+        'timestamp': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    }
+    
+    return render_template('transaction_summary.html', **context)
 
 @app.route('/history')
 def history():
