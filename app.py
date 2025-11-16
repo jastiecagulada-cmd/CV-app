@@ -6,8 +6,9 @@ import cv2
 import numpy as np
 import base64
 
-# Load YOLO model once
-model = YOLO(r"C:\Users\Asus\Desktop\Software Update\CV-app\after_dsmtf.pt")
+# Load YOLO model once - use relative path
+model_path = os.path.join(os.path.dirname(__file__), "after_dsmtf.pt")
+model = YOLO(model_path)
 
 app = Flask(__name__)
 app.secret_key = 'secret'
