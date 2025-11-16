@@ -37,7 +37,8 @@ def init_db():
             student_id TEXT PRIMARY KEY,
             name TEXT NOT NULL,
             course TEXT,
-            year_level INTEGER
+            year_level INTEGER,
+            number_of_equipment INTEGER DEFAULT 0
         )
     ''')
     c.execute('''
@@ -56,6 +57,13 @@ def init_db():
             quantity INTEGER DEFAULT 0
         )
     ''')
+    
+    # Add the new column to existing tables if it doesn't already exist
+    try:
+        c.execute("ALTER TABLE students ADD COLUMN number_of_equipment INTEGER DEFAULT 0")
+    except:
+        pass  # Column already exists
+    
     conn.commit()
     conn.close()
 
@@ -116,26 +124,37 @@ def borrow_return():
 
         conn = sqlite3.connect("database.db")
         c = conn.cursor()
+        
+        # Verify equipment exists in inventory
         c.execute("SELECT quantity FROM inventory WHERE name=?", (equipment_name,))
         row = c.fetchone()
         if not row:
             flash("Equipment not found in inventory.")
         else:
-            current_qty = row[0]
-            if action == "borrow":
-                if quantity > current_qty:
-                    flash(f"Only {current_qty} available for borrowing.")
-                else:
-                    c.execute("UPDATE inventory SET quantity=? WHERE name=?",
-                              (current_qty - quantity, equipment_name))
+            # Verify student exists
+            c.execute("SELECT number_of_equipment FROM students WHERE student_id=?", (student_id,))
+            student_row = c.fetchone()
+            if not student_row:
+                flash("Student not found. Please register first.")
+            else:
+                current_student_items = student_row[0] or 0
+                
+                # Log the action (inventory is NOT updated here - only via admin inventory page)
+                c.execute("INSERT INTO equipment_log (student_id, equipment_name, action) VALUES (?, ?, ?)",
+                          (student_id, equipment_name, action))
+                
+                # Update student's equipment count
+                if action == "borrow":
+                    new_count = current_student_items + quantity
+                    c.execute("UPDATE students SET number_of_equipment=? WHERE student_id=?", 
+                              (new_count, student_id))
                     flash(f"Borrowed {quantity} × {equipment_name}.")
-            elif action == "return":
-                c.execute("UPDATE inventory SET quantity=? WHERE name=?",
-                          (current_qty + quantity, equipment_name))
-                flash(f"Returned {quantity} × {equipment_name}.")
-            # Log the action
-            c.execute("INSERT INTO equipment_log (student_id, equipment_name, action) VALUES (?, ?, ?)",
-                      (student_id, equipment_name, action))
+                elif action == "return":
+                    new_count = max(0, current_student_items - quantity)  # Ensure non-negative
+                    c.execute("UPDATE students SET number_of_equipment=? WHERE student_id=?", 
+                              (new_count, student_id))
+                    flash(f"Returned {quantity} × {equipment_name}.")
+        
         conn.commit()
         conn.close()
         return redirect(url_for('borrow_return'))
