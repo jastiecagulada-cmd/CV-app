@@ -117,43 +117,79 @@ def borrow_return():
         detected_items = detected_items.split(',')
 
     if request.method == 'POST':
-        student_id = request.form['student_id']
-        action = request.form['action']
-        equipment_name = request.form['equipment_name']
-        quantity = int(request.form.get('quantity', 1))
+        student_id = request.form.get('student_id', '').strip()
+        action = request.form.get('action', '')
+        
+        # Handle both single and multiple equipment
+        equipment_names = request.form.getlist('equipment_names')
+        quantities = request.form.getlist('quantities')
+        
+        # Validate inputs
+        if not student_id:
+            flash("Student ID cannot be empty.")
+            return redirect(url_for('borrow_return'))
+        
+        if not equipment_names or not quantities or len(equipment_names) == 0:
+            flash("Please select at least one equipment item.")
+            return redirect(url_for('borrow_return'))
+        
+        # Validate quantities
+        try:
+            quantities = [int(q) for q in quantities]
+            for q in quantities:
+                if q <= 0:
+                    flash("Quantity must be at least 1.")
+                    return redirect(url_for('borrow_return'))
+        except ValueError:
+            flash("Invalid quantity entered.")
+            return redirect(url_for('borrow_return'))
 
         conn = sqlite3.connect("database.db")
         c = conn.cursor()
         
-        # Verify equipment exists in inventory
-        c.execute("SELECT quantity FROM inventory WHERE name=?", (equipment_name,))
-        row = c.fetchone()
-        if not row:
-            flash("Equipment not found in inventory.")
-        else:
-            # Verify student exists
-            c.execute("SELECT number_of_equipment FROM students WHERE student_id=?", (student_id,))
-            student_row = c.fetchone()
-            if not student_row:
-                flash("Student not found. Please register first.")
-            else:
-                current_student_items = student_row[0] or 0
-                
-                # Log the action (inventory is NOT updated here - only via admin inventory page)
+        # Verify student exists
+        c.execute("SELECT number_of_equipment FROM students WHERE student_id=?", (student_id,))
+        student_row = c.fetchone()
+        if not student_row:
+            flash("Student not found. Please register first.")
+            conn.close()
+            return redirect(url_for('borrow_return'))
+        
+        current_student_items = student_row[0] or 0
+        total_quantity = sum(quantities)
+        
+        # Verify all equipment exists
+        for equipment_name in equipment_names:
+            c.execute("SELECT quantity FROM inventory WHERE name=?", (equipment_name,))
+            if not c.fetchone():
+                flash(f"Equipment '{equipment_name}' not found in inventory.")
+                conn.close()
+                return redirect(url_for('borrow_return'))
+        
+        # Process all equipment items in one transaction
+        success = True
+        for equipment_name, quantity in zip(equipment_names, quantities):
+            try:
+                # Log the action
                 c.execute("INSERT INTO equipment_log (student_id, equipment_name, action) VALUES (?, ?, ?)",
                           (student_id, equipment_name, action))
-                
-                # Update student's equipment count
-                if action == "borrow":
-                    new_count = current_student_items + quantity
-                    c.execute("UPDATE students SET number_of_equipment=? WHERE student_id=?", 
-                              (new_count, student_id))
-                    flash(f"Borrowed {quantity} × {equipment_name}.")
-                elif action == "return":
-                    new_count = max(0, current_student_items - quantity)  # Ensure non-negative
-                    c.execute("UPDATE students SET number_of_equipment=? WHERE student_id=?", 
-                              (new_count, student_id))
-                    flash(f"Returned {quantity} × {equipment_name}.")
+            except Exception as e:
+                flash(f"Error logging transaction: {str(e)}")
+                success = False
+                break
+        
+        if success:
+            # Update student's equipment count
+            if action == "borrow":
+                new_count = current_student_items + total_quantity
+                c.execute("UPDATE students SET number_of_equipment=? WHERE student_id=?", 
+                          (new_count, student_id))
+                flash(f"Successfully borrowed {total_quantity} item(s) ({', '.join([f'{q}x {n}' for n, q in zip(equipment_names, quantities)])}).")
+            elif action == "return":
+                new_count = max(0, current_student_items - total_quantity)
+                c.execute("UPDATE students SET number_of_equipment=? WHERE student_id=?", 
+                          (new_count, student_id))
+                flash(f"Successfully returned {total_quantity} item(s) ({', '.join([f'{q}x {n}' for n, q in zip(equipment_names, quantities)])}).")
         
         conn.commit()
         conn.close()
