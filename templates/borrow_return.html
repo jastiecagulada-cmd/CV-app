@@ -385,11 +385,13 @@
         let itemCount = 0;
         let stream = null;
 
-        const inventory = {
-            {% for id, name, qty in inventory %}
-                "{{ name }}": {{ qty }},
-            {% endfor %}
-        };
+        // Build inventory object from Flask template data
+        const inventoryData = `{
+            {%- for id, name, qty in inventory %}
+            "{{ name }}": {{ qty }}{{ "," if not loop.last else "" }}
+            {%- endfor %}
+        }`;
+        const inventory = JSON.parse(inventoryData);
 
         function addEquipmentRow() {
             itemCount++;
