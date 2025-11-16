@@ -339,6 +339,69 @@ def transaction_summary():
     
     return render_template('transaction_summary.html', **context)
 
+
+@app.route('/admin/logs', methods=['GET', 'POST'])
+def admin_logs():
+    """Display transaction logs with filtering and sorting options."""
+    filters = {
+        'student_id': request.args.get('student_id', '').strip(),
+        'equipment': request.args.get('equipment', '').strip(),
+        'action': request.args.get('action', ''),
+        'sort': request.args.get('sort', 'timestamp_desc')
+    }
+    
+    conn = sqlite3.connect("database.db")
+    c = conn.cursor()
+    
+    # Build query with filters
+    query = """
+        SELECT e.id, e.student_id, s.name, e.equipment_name, e.action, e.timestamp
+        FROM equipment_log e
+        LEFT JOIN students s ON e.student_id = s.student_id
+        WHERE 1=1
+    """
+    params = []
+    
+    if filters['student_id']:
+        query += " AND e.student_id = ?"
+        params.append(filters['student_id'])
+    
+    if filters['equipment']:
+        query += " AND e.equipment_name LIKE ?"
+        params.append(f"%{filters['equipment']}%")
+    
+    if filters['action']:
+        query += " AND e.action = ?"
+        params.append(filters['action'])
+    
+    # Apply sorting
+    if filters['sort'] == 'timestamp_asc':
+        query += " ORDER BY e.timestamp ASC"
+    elif filters['sort'] == 'student_id':
+        query += " ORDER BY e.student_id ASC"
+    elif filters['sort'] == 'action':
+        query += " ORDER BY e.action ASC, e.timestamp DESC"
+    else:  # timestamp_desc is default
+        query += " ORDER BY e.timestamp DESC"
+    
+    c.execute(query, params)
+    logs = c.fetchall()
+    
+    # Get unique values for filter dropdowns
+    c.execute("SELECT DISTINCT student_id FROM students ORDER BY student_id")
+    all_students = c.fetchall()
+    
+    c.execute("SELECT DISTINCT equipment_name FROM equipment_log ORDER BY equipment_name")
+    all_equipment = c.fetchall()
+    
+    conn.close()
+    
+    return render_template('admin_logs.html', 
+                         logs=logs,
+                         filters=filters,
+                         students=[s[0] for s in all_students],
+                         equipment=[eq[0] for eq in all_equipment])
+
 @app.route('/history')
 def history():
     conn = sqlite3.connect("database.db")
