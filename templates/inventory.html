@@ -1,52 +1,64 @@
 <!DOCTYPE html>
 <html>
-<head><title>Inventory Management</title></head>
-<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-
+<head>
+    <title>Inventory Management</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
 <body>
+    <div class="container">
+        <h2>Inventory Management</h2>
 
-  <h2>Inventory Management</h2>
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for msg in messages %}
+                    <div class="flash">{{ msg }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
 
-  {% with messages = get_flashed_messages() %}
-    {% for msg in messages %}
-      <p style="color:green;">{{ msg }}</p>
-    {% endfor %}
-  {% endwith %}
+        <!-- Add Equipment Form -->
+        <h3>Add Equipment</h3>
+        <form method="POST">
+            <input type="hidden" name="action" value="add">
+            <label>Equipment Name:</label>
+            <input type="text" name="name" required>
 
-  <h3>Add Equipment</h3>
-  <form method="POST">
-    <input type="hidden" name="action" value="add">
-    Equipment Name: <input type="text" name="name" required><br>
-    Quantity: <input type="number" name="quantity" min="0" required><br>
-    <button type="submit">Add Equipment</button>
-  </form>
+            <label>Quantity:</label>
+            <input type="number" name="quantity" min="0" required>
 
-  <h3>Current Inventory</h3>
-  {% if items %}
-    <ul>
-      {% for id, name, qty in items %}
-        <li>
-          <b>{{ name }}</b> — {{ qty }} pcs<br>
-          <form method="POST" style="display:inline;">
-            <input type="hidden" name="action" value="update">
-            <input type="hidden" name="item_id" value="{{ id }}">
-            Update Quantity:
-            <input type="number" name="quantity" value="{{ qty }}" min="0" style="width:80px;">
-            <button type="submit">Update</button>
-          </form>
-          <form method="POST" style="display:inline;">
-            <input type="hidden" name="action" value="delete">
-            <input type="hidden" name="item_id" value="{{ id }}">
-            <button type="submit" style="background-color:#d9534f;">Delete</button>
-          </form>
-        </li>
-      {% endfor %}
-    </ul>
-  {% else %}
-    <p>No equipment found in inventory.</p>
-  {% endif %}
+            <button type="submit">Add Equipment</button>
+        </form>
 
-  <a href="/" class="back-button">Back</a>
+        <!-- Current Inventory -->
+        <h3>Current Inventory</h3>
+        {% if items %}
+            <ul style="list-style: none; padding: 0;">
+                {% for id, name, qty in items %}
+                    <li style="background: #f7f9fc; padding: 15px; margin-bottom: 10px; border-radius: 6px; border-left: 4px solid #1e90ff;">
+                        <strong>{{ name }}</strong> — <span style="color: #666;">{{ qty }} pcs</span>
+                        <div style="display: flex; gap: 10px; margin-top: 10px;">
+                            <form method="POST" style="display: flex; gap: 10px; align-items: center; flex: 1;">
+                                <input type="hidden" name="action" value="update">
+                                <input type="hidden" name="item_id" value="{{ id }}">
+                                <label style="margin: 0;">Update Qty:</label>
+                                <input type="number" name="quantity" value="{{ qty }}" min="0" style="width: 80px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                                <button type="submit">Update</button>
+                            </form>
+                            <form method="POST">
+                                <input type="hidden" name="action" value="delete">
+                                <input type="hidden" name="item_id" value="{{ id }}">
+                                <button type="submit" style="background-color: #d9534f;">Delete</button>
+                            </form>
+                        </div>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p style="text-align: center; color: #666;">No equipment found in inventory.</p>
+        {% endif %}
 
+        <a href="/" class="back-button">Back</a>
+    </div>
 </body>
 </html>
